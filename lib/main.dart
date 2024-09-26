@@ -357,10 +357,18 @@ class _HealthOverviewScreenState extends State<HealthOverviewScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              const Center(
-                child: Text(
-                  'View Health Analytics',
-                  style: TextStyle(color: Color(0xFF1E7A8F), fontSize: 18, decoration: TextDecoration.underline, fontWeight: FontWeight.w600),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const HealthAnalyticsPage()),
+                  );
+                },
+                child: const Center(
+                  child: Text(
+                    'View Health Analytics',
+                    style: TextStyle(color: Color(0xFF1E7A8F), fontSize: 18, decoration: TextDecoration.underline, fontWeight: FontWeight.w600),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -465,3 +473,26 @@ class HealthCard extends StatelessWidget {
 }
 
 // Page Health Analytics
+class HealthAnalyticsPage extends StatelessWidget {
+  const HealthAnalyticsPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Health Analytics'),
+        backgroundColor: const Color(0xFF1E7A8F), // Use your desired color
+      ),
+      body: Center(
+        child: const Text(
+          'Health Analytics Page',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Inter',
+          ),
+        ),
+      ),
+    );
+  }
+}
