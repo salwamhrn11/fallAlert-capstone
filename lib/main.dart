@@ -219,13 +219,14 @@ class HealthOverviewScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-            Container(
-              width: double.infinity, // Panjang garis mengikuti lebar parent
-              height: 0.5, // Ketebalan garis
-              color: Color(0xE2E5EF)),// Warna garis abu-abu
-              const SizedBox(height: 24),
-            const Text('Health Overview', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, fontFamily: 'Inter')),
-            const SizedBox(height: 16),
+              Container(
+                width: double.infinity, // Panjang garis mengikuti lebar parent
+                height: 2.0, // Ketebalan garis
+                color: Color(0xFFE2E5EF), // Warna garis abu-abu
+              ),
+              const SizedBox(height: 16),
+              const Text('Health Overview', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, fontFamily: 'Inter')),
+            const SizedBox(height: 8),
         const Text('You’re connected with your device', style: TextStyle(fontSize: 18, fontWeight: FontWeight.normal, fontFamily: 'Inter', color: Color(0xFF1E7A8F))),
               const SizedBox(height: 32),
               Center(
@@ -249,11 +250,11 @@ class HealthOverviewScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               const Center(
                 child: Text(
                   'View Health Analytics',
-                  style: TextStyle(color: Colors.teal, fontSize: 16, decoration: TextDecoration.underline),
+                  style: TextStyle(color: Color(0xFF1E7A8F), fontSize: 18, decoration: TextDecoration.underline, fontWeight: FontWeight.w600),
                 ),
               ),
               const SizedBox(height: 16), // Ensure there is some bottom padding
@@ -284,7 +285,7 @@ class HealthCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12), // Set padding to 25 pixels
+      padding: const EdgeInsets.all(12), // Set padding
       width: 309, // Width of the card
       height: 128, // Height of the card
       decoration: BoxDecoration(
@@ -300,13 +301,27 @@ class HealthCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center, // Center content vertically
           crossAxisAlignment: CrossAxisAlignment.center, // Center content horizontally
           children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w600,
-                fontFamily: 'Inter',// SemiBold
-              ),
+            // Row for Icon and Title
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center, // Align horizontally in the center
+              crossAxisAlignment: CrossAxisAlignment.center, // Ensure vertical alignment
+              children: [
+                Image.asset(
+                  title == 'Heart rate' ? 'images/1.png' : 'images/2.png',
+                  width: 24, // Adjust the size of the image
+                  height: 24, // Adjust the size of the image
+                ),
+                const SizedBox(width: 8), // Space between icon and text
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Inter', // SemiBold
+                  ),
+                  overflow: TextOverflow.ellipsis, // Prevent text overflow
+                ),
+              ],
             ),
             const SizedBox(height: 2), // Space between title and value
             Text(
@@ -314,7 +329,7 @@ class HealthCard extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.w800,
-                fontFamily: 'Inter',// ExtraBold
+                fontFamily: 'Inter', // ExtraBold
               ),
             ),
             const SizedBox(height: 1), // Space between value and normal range
@@ -323,7 +338,7 @@ class HealthCard extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                fontFamily: 'Inter',// SemiBold
+                fontFamily: 'Inter', // SemiBold
               ),
             ),
             const SizedBox(height: 1),
@@ -332,8 +347,8 @@ class HealthCard extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                  fontFamily: 'Inter',
-                  color: Color(0xFF1E7A8F)
+                fontFamily: 'Inter',
+                color: Color(0xFF1E7A8F),
               ),
             ),
           ],
