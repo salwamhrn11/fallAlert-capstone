@@ -27,14 +27,23 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const HealthOverviewScreen(),
+      home: const ConnectPage(),
     );
   }
 }
 
 // Page to connect to hardware
-class ConnectPage extends StatelessWidget {
+class ConnectPage extends StatefulWidget {
   const ConnectPage({Key? key}) : super(key: key);
+
+  @override
+  _ConnectPageState createState() => _ConnectPageState();
+}
+
+class _ConnectPageState extends State<ConnectPage> {
+  final TextEditingController serverController = TextEditingController();
+  final TextEditingController portController = TextEditingController();
+  String errorMessage = '';
 
   @override
   Widget build(BuildContext context) {
@@ -64,6 +73,7 @@ class ConnectPage extends StatelessWidget {
             Column(
               children: [
                 TextField(
+                  controller: serverController, // Mengambil input dari user
                   decoration: InputDecoration(
                     labelText: 'Enter your server',
                     prefixIcon: Image.asset(
@@ -77,13 +87,13 @@ class ConnectPage extends StatelessWidget {
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(24),
                       borderSide: const BorderSide(
-                        color: Colors.grey, // Border color when inactive
+                        color: Colors.grey,
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(24),
                       borderSide: const BorderSide(
-                        color: Colors.black, // Border color when active
+                        color: Colors.black,
                       ),
                     ),
                   ),
@@ -94,8 +104,9 @@ class ConnectPage extends StatelessWidget {
                     color: Color(0xFFA1A8B0),
                   ),
                 ),
-                const SizedBox(height: 16), // Add spacing
+                const SizedBox(height: 16),
                 TextField(
+                  controller: portController, // Mengambil input dari user
                   decoration: InputDecoration(
                     labelText: 'Enter your port',
                     prefixIcon: Image.asset(
@@ -109,13 +120,13 @@ class ConnectPage extends StatelessWidget {
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(24),
                       borderSide: const BorderSide(
-                        color: Colors.grey, // Border color when inactive
+                        color: Colors.grey,
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(24),
                       borderSide: const BorderSide(
-                        color: Colors.black, // Border color when active
+                        color: Colors.black,
                       ),
                     ),
                   ),
@@ -126,14 +137,25 @@ class ConnectPage extends StatelessWidget {
                     color: Color(0xFFA1A8B0),
                   ),
                 ),
-                const SizedBox(height: 16), // Add spacing
+                const SizedBox(height: 16),
               ],
             ),
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: () {
-                // Action when "Connect" button is pressed
-                print("Connecting to server...");
+                // Validasi input
+                if (serverController.text.isNotEmpty && portController.text.isNotEmpty) {
+                  // Jika valid, arahkan ke halaman HealthOverviewScreen
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const HealthOverviewScreen()),
+                  );
+                } else {
+                  // Jika tidak valid, tampilkan pesan error
+                  setState(() {
+                    errorMessage = 'Both server and port must be filled!';
+                  });
+                }
               },
               child: const SizedBox(
                 width: 327,
@@ -151,13 +173,20 @@ class ConnectPage extends StatelessWidget {
                 ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1E7A8F), // Button background color
+                backgroundColor: const Color(0xFF1E7A8F),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(32),
                 ),
-                minimumSize: const Size(327, 56), // Button size
+                minimumSize: const Size(327, 56),
               ),
             ),
+            const SizedBox(height: 16),
+            // Menampilkan pesan error jika ada
+            if (errorMessage.isNotEmpty)
+              Text(
+                errorMessage,
+                style: const TextStyle(color: Colors.red),
+              ),
           ],
         ),
       ),
@@ -186,13 +215,20 @@ class HealthOverviewScreen extends StatelessWidget {
         elevation: 0,
         toolbarHeight: 0,
       ),
-      body: SingleChildScrollView( // Wrap with SingleChildScrollView
+      body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(25.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Hi, Salwa!', style: TextStyle(fontSize: 40, fontFamily: 'Inter', fontWeight: FontWeight.bold, )),
+              const Text(
+                'Hi, Salwa!',
+                style: TextStyle(
+                  fontSize: 40,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 10),
               RichText(
                 text: TextSpan(
@@ -209,7 +245,7 @@ class HealthOverviewScreen extends StatelessWidget {
                     TextSpan(
                       text: '$currentDate',
                       style: TextStyle(
-                        color: Colors.black, // Warna hitam untuk tanggal
+                        color: Colors.black,
                         fontWeight: FontWeight.w600,
                         fontSize: 16,
                         fontFamily: 'Inter',
@@ -218,17 +254,59 @@ class HealthOverviewScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
-              Container(
-                width: double.infinity, // Panjang garis mengikuti lebar parent
-                height: 2.0, // Ketebalan garis
-                color: Color(0xFFE2E5EF), // Warna garis abu-abu
+              const SizedBox(height: 10),
+              const Text(
+                'You’re connected with your device',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'Inter',
+                  color: Color(0xFF1E7A8F),
+                ),
               ),
+
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: () {
+                  // Navigating back to the ConnectPage
+                  Navigator.pop(context);
+                },
+                child: const SizedBox(
+                  height: 25, // Set the height of the button
+                  child: Center(
+                    child: Text(
+                      'Disconnect Your Device',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 14, // Adjust font size as needed
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFBB0000), // Button color
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30), // Rounded corners with a radius of 30
+                  ),
+                  minimumSize: const Size(double.infinity, 25), // Set width to match the line and height to 25
+                ),
+              ),
+
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                height: 2.0,
+                color: Color(0xFFE2E5EF),
+              ),
+
               const SizedBox(height: 16),
-              const Text('Health Overview', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, fontFamily: 'Inter')),
-            const SizedBox(height: 8),
-        const Text('You’re connected with your device', style: TextStyle(fontSize: 18, fontWeight: FontWeight.normal, fontFamily: 'Inter', color: Color(0xFF1E7A8F))),
-              const SizedBox(height: 32),
+              const Text(
+                'Health Overview',
+                style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, fontFamily: 'Inter'),
+              ),
+              const SizedBox(height: 12),
               Center(
                 child: Column(
                   children: [
@@ -257,7 +335,7 @@ class HealthOverviewScreen extends StatelessWidget {
                   style: TextStyle(color: Color(0xFF1E7A8F), fontSize: 18, decoration: TextDecoration.underline, fontWeight: FontWeight.w600),
                 ),
               ),
-              const SizedBox(height: 16), // Ensure there is some bottom padding
+              const SizedBox(height: 16),
             ],
           ),
         ),
