@@ -2,6 +2,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'dart:async';
+import 'dart:math';
 
 void main() async {
   // Ensure Flutter is initialized
@@ -195,15 +197,44 @@ class _ConnectPageState extends State<ConnectPage> {
 }
 
 // Health overview dashboard page
-class HealthOverviewScreen extends StatelessWidget {
-  final int heartRate;
-  final int oxygenSaturation;
+class HealthOverviewScreen extends StatefulWidget {
+  const HealthOverviewScreen({Key? key}) : super(key: key);
 
-  const HealthOverviewScreen({
-    Key? key,
-    this.heartRate = 70,
-    this.oxygenSaturation = 98,
-  }) : super(key: key);
+  @override
+  _HealthOverviewScreenState createState() => _HealthOverviewScreenState();
+}
+
+class _HealthOverviewScreenState extends State<HealthOverviewScreen> {
+  late Timer _timer;
+  int heartRate = 75;
+  int oxygenSaturation = 98;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+      setState(() {
+        heartRate = _generateRandomHeartRate();
+        oxygenSaturation = _generateRandomOxygenSaturation();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  int _generateRandomHeartRate() {
+    final random = Random();
+    return 60 + random.nextInt(41);
+  }
+
+  int _generateRandomOxygenSaturation() {
+    final random = Random();
+    return 95 + random.nextInt(6);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -264,7 +295,6 @@ class HealthOverviewScreen extends StatelessWidget {
                   color: Color(0xFF1E7A8F),
                 ),
               ),
-
               const SizedBox(height: 8),
               ElevatedButton(
                 onPressed: () {
@@ -272,13 +302,13 @@ class HealthOverviewScreen extends StatelessWidget {
                   Navigator.pop(context);
                 },
                 child: const SizedBox(
-                  height: 25, // Set the height of the button
+                  height: 25,
                   child: Center(
                     child: Text(
                       'Disconnect Your Device',
                       style: TextStyle(
                         fontFamily: 'Inter',
-                        fontSize: 14, // Adjust font size as needed
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
@@ -286,21 +316,19 @@ class HealthOverviewScreen extends StatelessWidget {
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFBB0000), // Button color
+                  backgroundColor: const Color(0xFFBB0000),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30), // Rounded corners with a radius of 30
+                    borderRadius: BorderRadius.circular(30),
                   ),
-                  minimumSize: const Size(double.infinity, 25), // Set width to match the line and height to 25
+                  minimumSize: const Size(double.infinity, 25),
                 ),
               ),
-
               const SizedBox(height: 10),
               Container(
                 width: double.infinity,
                 height: 2.0,
                 color: Color(0xFFE2E5EF),
               ),
-
               const SizedBox(height: 16),
               const Text(
                 'Health Overview',
@@ -312,7 +340,7 @@ class HealthOverviewScreen extends StatelessWidget {
                   children: [
                     HealthCard(
                       title: 'Heart rate',
-                      value: heartRate.toString(),
+                      value: heartRate.toString(), // Nilai heart rate
                       unit: 'beats/min',
                       normalRange: 'Normal: 60 to 100 beats/min',
                       imagePath: 'images/heart_background.png',
@@ -320,7 +348,7 @@ class HealthOverviewScreen extends StatelessWidget {
                     const SizedBox(height: 16),
                     HealthCard(
                       title: 'Oxygen Saturation',
-                      value: '$oxygenSaturation%',
+                      value: '$oxygenSaturation%', // Nilai oxygen saturation
                       unit: '',
                       normalRange: 'Normal: more than equal to 95%',
                       imagePath: 'images/oxygen_background.png',
@@ -435,3 +463,5 @@ class HealthCard extends StatelessWidget {
     );
   }
 }
+
+// Page Health Analytics
