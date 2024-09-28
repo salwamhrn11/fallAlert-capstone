@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "960259671995",
+    "project_id": "capstone-2e60a",
+    "storage_bucket": "capstone-2e60a.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:960259671995:android:af37f509aacc2060ec669e",
+        "android_client_info": {
+          "package_name": "com.capstone.fallalert"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAGom_qw_cMJPIuaXCfagXBuIhNOMX_m_Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

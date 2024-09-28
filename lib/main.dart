@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'dart:async';
 import 'dart:math';
+import 'package:fl_chart/fl_chart.dart';
 
 void main() async {
   // Ensure Flutter is initialized
@@ -472,23 +473,186 @@ class HealthCard extends StatelessWidget {
   }
 }
 
-// Page Health Analytics
-class HealthAnalyticsPage extends StatelessWidget {
+// Health Analytics Page
+class HealthAnalyticsPage extends StatefulWidget {
   const HealthAnalyticsPage({Key? key}) : super(key: key);
+
+  @override
+  _HealthAnalyticsPageState createState() => _HealthAnalyticsPageState();
+}
+
+class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
+  String selectedRange = 'Day';
+  final List<FlSpot> heartRateDayData = [
+    FlSpot(0, 70),
+    FlSpot(2, 85),
+    FlSpot(4, 78),
+    FlSpot(6, 90),
+    FlSpot(8, 74),
+  ];
+
+  final List<FlSpot> oxygenDayData = [
+    FlSpot(0, 98),
+    FlSpot(2, 96),
+    FlSpot(4, 97),
+    FlSpot(6, 95),
+    FlSpot(8, 98),
+  ];
+
+  List<FlSpot> getDataForRange(String range) {
+    if (range == 'Day') {
+      return heartRateDayData;
+    } else if (range == 'Week') {
+      return [
+        FlSpot(0, 78),
+        FlSpot(2, 75),
+        FlSpot(4, 85),
+        FlSpot(6, 80),
+        FlSpot(8, 82),
+      ];
+    } else if (range == 'Month') {
+      return [
+        FlSpot(0, 80),
+        FlSpot(2, 82),
+        FlSpot(4, 78),
+        FlSpot(6, 85),
+        FlSpot(8, 84),
+      ];
+    } else {
+      return [];
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Health Analytics'),
-        backgroundColor: const Color(0xFF1E7A8F), // Use your desired color
-      ),
-      body: Center(
-        child: const Text(
-          'Health Analytics Page',
+        title: const Text(
+          'Health Analytics',
           style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
+            fontFamily: 'Inter',
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildRangeButton('Day'),
+                _buildRangeButton('Week'),
+                _buildRangeButton('Month'),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Heart Rate Analytics',
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Inter',
+              ),
+            ),
+            SizedBox(
+              height: 200,
+              child: LineChart(
+                LineChartData(
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: getDataForRange(selectedRange),
+                      isCurved: true,
+                      color: Colors.red,
+                      belowBarData: BarAreaData(show: false),
+                      dotData: FlDotData(show: true),
+                    ),
+                  ],
+                  titlesData: FlTitlesData(
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 22,
+                        getTitlesWidget: (value, _) {
+                          return Text(
+                            '${value.toInt() * 3}:00',
+                            style: const TextStyle(fontSize: 10),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Oxygen Saturation Analytics',
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Inter',
+              ),
+            ),
+            SizedBox(
+              height: 200,
+              child: LineChart(
+                LineChartData(
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: getDataForRange(selectedRange),
+                      isCurved: true,
+                      color: Colors.blue,
+                      belowBarData: BarAreaData(show: false),
+                      dotData: FlDotData(show: true),
+                    ),
+                  ],
+                  titlesData: FlTitlesData(
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 22,
+                        getTitlesWidget: (value, _) {
+                          return Text(
+                            '${value.toInt() * 3}:00',
+                            style: const TextStyle(fontSize: 10),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRangeButton(String range) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          selectedRange = range;
+        });
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: selectedRange == range ? Colors.blue : Colors.grey.shade300,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          range,
+          style: TextStyle(
+            fontSize: 16,
+            color: selectedRange == range ? Colors.white : Colors.black,
             fontFamily: 'Inter',
           ),
         ),
