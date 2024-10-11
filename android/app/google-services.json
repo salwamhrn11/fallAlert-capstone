@@ -1,21 +1,22 @@
 {
   "project_info": {
-    "project_number": "960259671995",
-    "project_id": "capstone-2e60a",
-    "storage_bucket": "capstone-2e60a.appspot.com"
+    "project_number": "309461445379",
+    "firebase_url": "https://capstone-2-c8b78-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "capstone-2-c8b78",
+    "storage_bucket": "capstone-2-c8b78.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:960259671995:android:af37f509aacc2060ec669e",
+        "mobilesdk_app_id": "1:309461445379:android:9ef3bad9436d23a1311736",
         "android_client_info": {
-          "package_name": "com.capstone.fallalert"
+          "package_name": "com.fallallert.app"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAGom_qw_cMJPIuaXCfagXBuIhNOMX_m_Y"
+          "current_key": "AIzaSyBWw55J1Go0KMTnFiwJT9UQ8VQDP5u1SM0"
         }
       ],
       "services": {

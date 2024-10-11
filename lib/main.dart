@@ -5,7 +5,9 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'dart:async';
 import 'dart:math';
 import 'package:fl_chart/fl_chart.dart';
-
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'firebase_options.dart';
 void main() async {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,12 +15,15 @@ void main() async {
   // Initialize the date formatting for the 'id' locale (Indonesian)
   await initializeDateFormatting('id', null);
 
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.android,
+  );
   // Run the app after initialization
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +42,7 @@ class MyApp extends StatelessWidget {
 
 // Page to connect to hardware
 class ConnectPage extends StatefulWidget {
-  const ConnectPage({Key? key}) : super(key: key);
+  const ConnectPage({super.key});
 
   @override
   _ConnectPageState createState() => _ConnectPageState();
@@ -160,6 +165,13 @@ class _ConnectPageState extends State<ConnectPage> {
                   });
                 }
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1E7A8F),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(32),
+                ),
+                minimumSize: const Size(327, 56),
+              ),
               child: const SizedBox(
                 width: 327,
                 height: 56,
@@ -174,13 +186,6 @@ class _ConnectPageState extends State<ConnectPage> {
                     ),
                   ),
                 ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1E7A8F),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(32),
-                ),
-                minimumSize: const Size(327, 56),
               ),
             ),
             const SizedBox(height: 16),
@@ -199,42 +204,65 @@ class _ConnectPageState extends State<ConnectPage> {
 
 // Health overview dashboard page
 class HealthOverviewScreen extends StatefulWidget {
-  const HealthOverviewScreen({Key? key}) : super(key: key);
+  const HealthOverviewScreen({super.key});
 
   @override
   _HealthOverviewScreenState createState() => _HealthOverviewScreenState();
 }
 
+
 class _HealthOverviewScreenState extends State<HealthOverviewScreen> {
   late Timer _timer;
   int heartRate = 75;
   int oxygenSaturation = 98;
+  
+  // Reference to the Firebase database
+  final DatabaseReference _dbRef = FirebaseDatabase.instance.ref();
 
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
         heartRate = _generateRandomHeartRate();
         oxygenSaturation = _generateRandomOxygenSaturation();
       });
+      // Push the data to Firebase
+      _pushHealthData(heartRate, oxygenSaturation);
+    });
+  }
+  
+
+  // Function to push data to Firebase
+  void _pushHealthData(int heartRate, int oxygenSaturation) {
+    // Define the structure of the data
+    Map<String, dynamic> healthData = {
+      'heart_rate': heartRate,
+      'oxygen_saturation': oxygenSaturation,
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+
+    // Push the data to Firebase under "healthOverview" node
+    _dbRef.child('healthOverview').push().set(healthData).then((_) {
+      print("Data saved successfully!");
+    }).catchError((error) {
+      print("Failed to save data: $error");
     });
   }
 
   @override
   void dispose() {
-    _timer.cancel();
+    // Ensure timer is canceled when the widget is disposed
+    _timer?.cancel();
     super.dispose();
   }
 
   int _generateRandomHeartRate() {
-    final random = Random();
-    return 60 + random.nextInt(41);
+    return 60 + Random().nextInt(41);
   }
 
   int _generateRandomOxygenSaturation() {
-    final random = Random();
-    return 95 + random.nextInt(6);
+    return 95 + Random().nextInt(6);
   }
 
   @override
@@ -265,7 +293,7 @@ class _HealthOverviewScreenState extends State<HealthOverviewScreen> {
               RichText(
                 text: TextSpan(
                   children: [
-                    TextSpan(
+                    const TextSpan(
                       text: 'Hari ini: ',
                       style: TextStyle(
                         color: Color(0xFF1E7A8F),
@@ -275,8 +303,8 @@ class _HealthOverviewScreenState extends State<HealthOverviewScreen> {
                       ),
                     ),
                     TextSpan(
-                      text: '$currentDate',
-                      style: TextStyle(
+                      text: currentDate,
+                      style: const TextStyle(
                         color: Colors.black,
                         fontWeight: FontWeight.w600,
                         fontSize: 16,
@@ -302,6 +330,13 @@ class _HealthOverviewScreenState extends State<HealthOverviewScreen> {
                   // Navigating back to the ConnectPage
                   Navigator.pop(context);
                 },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFBB0000),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  minimumSize: const Size(double.infinity, 25),
+                ),
                 child: const SizedBox(
                   height: 25,
                   child: Center(
@@ -316,20 +351,9 @@ class _HealthOverviewScreenState extends State<HealthOverviewScreen> {
                     ),
                   ),
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFBB0000),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  minimumSize: const Size(double.infinity, 25),
-                ),
               ),
               const SizedBox(height: 10),
-              Container(
-                width: double.infinity,
-                height: 2.0,
-                color: Color(0xFFE2E5EF),
-              ),
+              Divider(color: const Color(0xFFE2E5EF), thickness: 2),
               const SizedBox(height: 16),
               const Text(
                 'Health Overview',
@@ -368,7 +392,12 @@ class _HealthOverviewScreenState extends State<HealthOverviewScreen> {
                 child: const Center(
                   child: Text(
                     'View Health Analytics',
-                    style: TextStyle(color: Color(0xFF1E7A8F), fontSize: 18, decoration: TextDecoration.underline, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: Color(0xFF1E7A8F),
+                      fontSize: 18,
+                      decoration: TextDecoration.underline,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -381,6 +410,7 @@ class _HealthOverviewScreenState extends State<HealthOverviewScreen> {
   }
 }
 
+
 class HealthCard extends StatelessWidget {
   final String title;
   final String value;
@@ -389,13 +419,13 @@ class HealthCard extends StatelessWidget {
   final String imagePath;
 
   const HealthCard({
-    Key? key,
+    super.key,
     required this.title,
     required this.value,
     required this.unit,
     required this.normalRange,
     required this.imagePath,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -475,7 +505,7 @@ class HealthCard extends StatelessWidget {
 
 // Health Analytics Page
 class HealthAnalyticsPage extends StatefulWidget {
-  const HealthAnalyticsPage({Key? key}) : super(key: key);
+  const HealthAnalyticsPage({super.key});
 
   @override
   _HealthAnalyticsPageState createState() => _HealthAnalyticsPageState();
