@@ -512,44 +512,58 @@ class HealthAnalyticsPage extends StatefulWidget {
 }
 
 class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
-  String selectedRange = 'Day';
-  final List<FlSpot> heartRateDayData = [
-    FlSpot(0, 70),
-    FlSpot(2, 85),
-    FlSpot(4, 78),
-    FlSpot(6, 90),
-    FlSpot(8, 74),
-  ];
+  String selectedRange = 'Hour';
+  List<FlSpot> heartRateData = [];
+  List<FlSpot> oxygenSaturationData = [];
 
-  final List<FlSpot> oxygenDayData = [
-    FlSpot(0, 98),
-    FlSpot(2, 96),
-    FlSpot(4, 97),
-    FlSpot(6, 95),
-    FlSpot(8, 98),
-  ];
+  final DatabaseReference _dbRef = FirebaseDatabase.instance.ref();
 
-  List<FlSpot> getDataForRange(String range) {
-    if (range == 'Day') {
-      return heartRateDayData;
-    } else if (range == 'Week') {
-      return [
-        FlSpot(0, 78),
-        FlSpot(2, 75),
-        FlSpot(4, 85),
-        FlSpot(6, 80),
-        FlSpot(8, 82),
-      ];
-    } else if (range == 'Month') {
-      return [
-        FlSpot(0, 80),
-        FlSpot(2, 82),
-        FlSpot(4, 78),
-        FlSpot(6, 85),
-        FlSpot(8, 84),
-      ];
+  @override
+  void initState() {
+    super.initState();
+    _fetchDataFromFirebase(); // Fetch data when the page loads
+  }
+
+  // Fetch data from Firebase and map it to FlSpot objects
+  void _fetchDataFromFirebase() {
+    // Reference to heart rate data in the database
+    _dbRef.child('healthOverview').onValue.listen((event) {
+      if (event.snapshot.exists) {
+        Map data = event.snapshot.value as Map<dynamic, dynamic>;
+        List<FlSpot> newHeartRateData = [];
+        List<FlSpot> newOxygenData = [];
+
+        // Loop through the data and map it to FlSpot
+        int index = 0;
+        data.forEach((key, value) {
+          double heartRate = double.tryParse(value['heart_rate'].toString()) ?? 0;
+          double oxygenSaturation = double.tryParse(value['oxygen_saturation'].toString()) ?? 0;
+          
+          newHeartRateData.add(FlSpot(index.toDouble(), heartRate));
+          newOxygenData.add(FlSpot(index.toDouble(), oxygenSaturation));
+          index++;
+        });
+
+        // Update the chart data in the state
+        setState(() {
+          heartRateData = newHeartRateData;
+          oxygenSaturationData = newOxygenData;
+        });
+      }
+    });
+  }
+
+  List<FlSpot> getDataForRange(String range, List<FlSpot> data) {
+    // Filter the data for the selected range
+    if (range == 'Second') {
+      int dataLength = data.length;
+      if (dataLength > 50) {
+        return data.skip(dataLength - 50).toList(); // Take the last 50 entries
+      } else {
+        return data; // If less than 5, return all data
+      }
     } else {
-      return [];
+      return data;
     }
   }
 
@@ -575,15 +589,13 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildRangeButton('Day'),
-                _buildRangeButton('Week'),
-                _buildRangeButton('Month'),
+                _buildRangeButton('Second'),
               ],
             ),
             const SizedBox(height: 16),
-            Text(
+            const Text(
               'Heart Rate Analytics',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 fontFamily: 'Inter',
@@ -595,7 +607,7 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
                 LineChartData(
                   lineBarsData: [
                     LineChartBarData(
-                      spots: getDataForRange(selectedRange),
+                      spots: getDataForRange(selectedRange, heartRateData),
                       isCurved: true,
                       color: Colors.red,
                       belowBarData: BarAreaData(show: false),
@@ -609,7 +621,7 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
                         reservedSize: 22,
                         getTitlesWidget: (value, _) {
                           return Text(
-                            '${value.toInt() * 3}:00',
+                            '${value.toInt()}:00',
                             style: const TextStyle(fontSize: 10),
                           );
                         },
@@ -620,9 +632,9 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
               ),
             ),
             const SizedBox(height: 16),
-            Text(
+            const Text(
               'Oxygen Saturation Analytics',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 fontFamily: 'Inter',
@@ -634,7 +646,7 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
                 LineChartData(
                   lineBarsData: [
                     LineChartBarData(
-                      spots: getDataForRange(selectedRange),
+                      spots: getDataForRange(selectedRange, oxygenSaturationData),
                       isCurved: true,
                       color: Colors.blue,
                       belowBarData: BarAreaData(show: false),
@@ -648,7 +660,7 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
                         reservedSize: 22,
                         getTitlesWidget: (value, _) {
                           return Text(
-                            '${value.toInt() * 3}:00',
+                            '${value.toInt()}:00',
                             style: const TextStyle(fontSize: 10),
                           );
                         },
