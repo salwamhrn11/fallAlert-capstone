@@ -215,7 +215,7 @@ class _HealthOverviewScreenState extends State<HealthOverviewScreen> {
   late Timer _timer;
   int heartRate = 75;
   int oxygenSaturation = 98;
-  
+
   // Reference to the Firebase database
   final DatabaseReference _dbRef = FirebaseDatabase.instance.ref();
 
@@ -231,7 +231,7 @@ class _HealthOverviewScreenState extends State<HealthOverviewScreen> {
       _pushHealthData(heartRate, oxygenSaturation);
     });
   }
-  
+
 
   // Function to push data to Firebase
   void _pushHealthData(int heartRate, int oxygenSaturation) {
@@ -386,7 +386,7 @@ class _HealthOverviewScreenState extends State<HealthOverviewScreen> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const HealthAnalyticsPage()),
+                    MaterialPageRoute(builder: (context) => HealthAnalyticsPage()),
                   );
                 },
                 child: const Center(
@@ -504,6 +504,7 @@ class HealthCard extends StatelessWidget {
 }
 
 // Health Analytics Page
+//kode perdetik tp masih patah2 + blm 5 detik
 class HealthAnalyticsPage extends StatefulWidget {
   const HealthAnalyticsPage({super.key});
 
@@ -512,59 +513,45 @@ class HealthAnalyticsPage extends StatefulWidget {
 }
 
 class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
-  String selectedRange = 'Hour';
+  String selectedRange = 'Second';
   List<FlSpot> heartRateData = [];
   List<FlSpot> oxygenSaturationData = [];
+  List<String> timeLabels = [];
 
   final DatabaseReference _dbRef = FirebaseDatabase.instance.ref();
+  int _indexCounter = 0; // Auto-increment index for X
 
   @override
   void initState() {
     super.initState();
-    _fetchDataFromFirebase(); // Fetch data when the page loads
+    _fetchDataFromFirebase();
   }
 
-  // Fetch data from Firebase and map it to FlSpot objects
   void _fetchDataFromFirebase() {
-    // Reference to heart rate data in the database
-    _dbRef.child('healthOverview').onValue.listen((event) {
+    _dbRef.child('healthOverview').limitToLast(20).onChildAdded.listen((event) {
       if (event.snapshot.exists) {
-        Map data = event.snapshot.value as Map<dynamic, dynamic>;
-        List<FlSpot> newHeartRateData = [];
-        List<FlSpot> newOxygenData = [];
+        Map<dynamic, dynamic> value = event.snapshot.value as Map<dynamic, dynamic>;
 
-        // Loop through the data and map it to FlSpot
-        int index = 0;
-        data.forEach((key, value) {
-          double heartRate = double.tryParse(value['heart_rate'].toString()) ?? 0;
-          double oxygenSaturation = double.tryParse(value['oxygen_saturation'].toString()) ?? 0;
-          
-          newHeartRateData.add(FlSpot(index.toDouble(), heartRate));
-          newOxygenData.add(FlSpot(index.toDouble(), oxygenSaturation));
-          index++;
-        });
+        double heartRate = double.tryParse(value['heart_rate'].toString()) ?? 0;
+        double oxygenSaturation = double.tryParse(value['oxygen_saturation'].toString()) ?? 0;
 
-        // Update the chart data in the state
+        // Ambil timestamp atau gunakan index counter
+        DateTime? timestamp = DateTime.tryParse(event.snapshot.key ?? '') ?? DateTime.now();
+        double xValue = _indexCounter.toDouble(); // Konversi ke double
+        _indexCounter++; // Increment counter
+
         setState(() {
-          heartRateData = newHeartRateData;
-          oxygenSaturationData = newOxygenData;
+          heartRateData.add(FlSpot(xValue, heartRate));
+          oxygenSaturationData.add(FlSpot(xValue, oxygenSaturation));
+          timeLabels.add(DateFormat.Hms().format(timestamp));
         });
       }
     });
   }
 
   List<FlSpot> getDataForRange(String range, List<FlSpot> data) {
-    // Filter the data for the selected range
-    if (range == 'Second') {
-      int dataLength = data.length;
-      if (dataLength > 50) {
-        return data.skip(dataLength - 50).toList(); // Take the last 50 entries
-      } else {
-        return data; // If less than 5, return all data
-      }
-    } else {
-      return data;
-    }
+    int limit = 20;
+    return data.length > limit ? data.sublist(data.length - limit) : data;
   }
 
   @override
@@ -588,9 +575,7 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildRangeButton('Second'),
-              ],
+              children: [_buildRangeButton('Second')],
             ),
             const SizedBox(height: 16),
             const Text(
@@ -604,31 +589,7 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
             SizedBox(
               height: 200,
               child: LineChart(
-                LineChartData(
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: getDataForRange(selectedRange, heartRateData),
-                      isCurved: true,
-                      color: Colors.red,
-                      belowBarData: BarAreaData(show: false),
-                      dotData: FlDotData(show: true),
-                    ),
-                  ],
-                  titlesData: FlTitlesData(
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 22,
-                        getTitlesWidget: (value, _) {
-                          return Text(
-                            '${value.toInt()}:00',
-                            style: const TextStyle(fontSize: 10),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
+                _buildLineChartData(heartRateData, Colors.red),
               ),
             ),
             const SizedBox(height: 16),
@@ -643,34 +604,45 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
             SizedBox(
               height: 200,
               child: LineChart(
-                LineChartData(
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: getDataForRange(selectedRange, oxygenSaturationData),
-                      isCurved: true,
-                      color: Colors.blue,
-                      belowBarData: BarAreaData(show: false),
-                      dotData: FlDotData(show: true),
-                    ),
-                  ],
-                  titlesData: FlTitlesData(
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 22,
-                        getTitlesWidget: (value, _) {
-                          return Text(
-                            '${value.toInt()}:00',
-                            style: const TextStyle(fontSize: 10),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
+                _buildLineChartData(oxygenSaturationData, Colors.blue),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  LineChartData _buildLineChartData(List<FlSpot> data, Color color) {
+    return LineChartData(
+      minY: _getMinValue(data) - 10,
+      maxY: _getMaxValue(data) + 10,
+      lineBarsData: [
+        LineChartBarData(
+          spots: getDataForRange(selectedRange, data),
+          isCurved: true,
+          color: color,
+          belowBarData: BarAreaData(show: false),
+          dotData: FlDotData(show: false),
+        ),
+      ],
+      titlesData: FlTitlesData(
+        bottomTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 22,
+            interval: 5, // Adjust interval for X-axis
+            getTitlesWidget: (value, _) {
+              int index = value.toInt();
+              if (index % 5 == 0 && index < timeLabels.length) {
+                return Text(
+                  timeLabels[index],
+                  style: const TextStyle(fontSize: 8),
+                );
+              }
+              return const Text('');
+            },
+          ),
         ),
       ),
     );
@@ -701,4 +673,10 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
       ),
     );
   }
+
+  double _getMinValue(List<FlSpot> data) =>
+      data.isEmpty ? 0 : data.map((e) => e.y).reduce((a, b) => a < b ? a : b);
+
+  double _getMaxValue(List<FlSpot> data) =>
+      data.isEmpty ? 100 : data.map((e) => e.y).reduce((a, b) => a > b ? a : b);
 }
