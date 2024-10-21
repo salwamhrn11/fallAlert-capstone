@@ -258,11 +258,11 @@ class _HealthOverviewScreenState extends State<HealthOverviewScreen> {
   }
 
   int _generateRandomHeartRate() {
-    return 60 + Random().nextInt(41);
+    return 58 + Random().nextInt(64);
   }
 
   int _generateRandomOxygenSaturation() {
-    return 95 + Random().nextInt(6);
+    return 94 + Random().nextInt(6);
   }
 
   @override
@@ -513,11 +513,10 @@ class HealthAnalyticsPage extends StatefulWidget {
 }
 
 class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
-  String selectedRange = 'Second';
+  bool historyState = false;
   List<FlSpot> heartRateData = [];
   List<FlSpot> oxygenSaturationData = [];
   List<String> timeLabels = [];
-
   final DatabaseReference _dbRef = FirebaseDatabase.instance.ref();
   int _indexCounter = 0; // Auto-increment index for X
 
@@ -528,17 +527,16 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
   }
 
   void _fetchDataFromFirebase() {
-    _dbRef.child('healthOverview').limitToLast(20).onChildAdded.listen((event) {
+    _dbRef.child('healthOverview').limitToLast(100).onChildAdded.listen((event) {
       if (event.snapshot.exists) {
         Map<dynamic, dynamic> value = event.snapshot.value as Map<dynamic, dynamic>;
 
         double heartRate = double.tryParse(value['heart_rate'].toString()) ?? 0;
         double oxygenSaturation = double.tryParse(value['oxygen_saturation'].toString()) ?? 0;
 
-        // Ambil timestamp atau gunakan index counter
         DateTime? timestamp = DateTime.tryParse(event.snapshot.key ?? '') ?? DateTime.now();
-        double xValue = _indexCounter.toDouble(); // Konversi ke double
-        _indexCounter++; // Increment counter
+        double xValue = _indexCounter.toDouble(); // Convert index to double for chart
+        _indexCounter++; // Increment index
 
         setState(() {
           heartRateData.add(FlSpot(xValue, heartRate));
@@ -549,9 +547,9 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
     });
   }
 
-  List<FlSpot> getDataForRange(String range, List<FlSpot> data) {
-    int limit = 20;
-    return data.length > limit ? data.sublist(data.length - limit) : data;
+  List<FlSpot> getDataForRange(int range, List<FlSpot> data) {
+    // Only display a fixed window of 50 data points, but allow scrolling
+    return data.length > range ? data.sublist(data.length - range) : data;
   }
 
   @override
@@ -571,45 +569,209 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [_buildRangeButton('Second')],
+              children: [_buildHistoryButton()],
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'Heart Rate Analytics',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Inter',
-              ),
-            ),
-            SizedBox(
-              height: 200,
-              child: LineChart(
-                _buildLineChartData(heartRateData, Colors.red),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Oxygen Saturation Analytics',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Inter',
-              ),
-            ),
-            SizedBox(
-              height: 200,
-              child: LineChart(
-                _buildLineChartData(oxygenSaturationData, Colors.blue),
-              ),
-            ),
-          ],
+          const SizedBox(height: 16),
+          // Conditional rendering based on historyState
+          historyState == false
+              ? Column(
+                  children: [
+                    _buildDataSection('Heart Rate Analytics', heartRateData, Colors.red),
+                    const SizedBox(height: 16),
+                    _buildDataSection('Oxygen Saturation Analytics', oxygenSaturationData, Colors.blue),
+                  ],
+                )
+              : _buildHistoryStats(), // Show history stats when historyState is true
+        ],
         ),
       ),
+    );
+  }
+
+  Widget _buildHistoryStats() {
+    List<Map<String, dynamic>> lowOxySaturation = _getLowOxygenSaturationAnomalies();
+    List<Map<String, dynamic>> highHeartRate = _getHighHeartRateAnomalies();
+    List<Map<String, dynamic>> lowHeartRate = _getLowHeartRateAnomalies();
+    int abnormalHighHeartRateCount = highHeartRate.length;
+    int abnormalLowHeartRateCount = lowHeartRate.length;
+    int abnormalOxygenSaturationCount = lowOxySaturation.length;
+
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: () => _showAnomalyDialog("High Heart Rate Alerts", highHeartRate),
+          child: _buildStatCard(
+            'High Heart Rate Alerts',
+            'Heart rate > 120',
+            abnormalHighHeartRateCount,
+          ),
+        ),
+        const SizedBox(height: 16),
+        GestureDetector(
+          onTap: () => _showAnomalyDialog("Low Heart Rate Alerts", lowHeartRate),
+          child: _buildStatCard(
+            'Low Heart Rate Alerts',
+            'Heart rate < 60',
+            abnormalLowHeartRateCount,
+          ),
+        ),
+        const SizedBox(height: 16),
+        GestureDetector(
+          onTap: () => _showAnomalyDialog("Low Oxygen Saturation Alerts", lowOxySaturation),
+          child: _buildStatCard(
+            'Low Oxygen Saturation Alerts',
+            'Oxygen saturation < 95%',
+            abnormalOxygenSaturationCount,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Method to show the pop-up Detail
+  void _showAnomalyDialog(String title, List<Map<String, dynamic>> anomalies) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: anomalies.length,
+              itemBuilder: (context, index) {
+                final anomaly = anomalies[index];
+                return ListTile(
+                  title: Text('Value: ${anomaly['value']}'),
+                  subtitle: Text('Datetime: ${anomaly['timestamp']}'),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildStatCard(String title, String subtitle, int count) {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Inter',
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: const TextStyle(fontSize: 14, fontFamily: 'Inter'),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Count: $count',
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.red,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Inter',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Map<String, dynamic>> _getHighHeartRateAnomalies() {
+    DateTime now = DateTime.now();
+    return heartRateData
+        .asMap()
+        .entries
+        .where((entry) =>
+            entry.value.y > 120)
+        .map((entry) => {
+              'timestamp': timeLabels[entry.key],
+              'value': entry.value.y,
+            })
+        .toList();
+  }
+
+  List<Map<String, dynamic>> _getLowHeartRateAnomalies() {
+    return heartRateData
+        .asMap()
+        .entries
+        .where((entry) =>
+            entry.value.y < 60)
+        .map((entry) => {
+              'timestamp': timeLabels[entry.key],
+              'value': entry.value.y,
+            })
+        .toList();
+  }
+
+  List<Map<String, dynamic>> _getLowOxygenSaturationAnomalies() {
+    DateTime now = DateTime.now();
+    return oxygenSaturationData
+        .asMap()
+        .entries
+        .where((entry) =>
+            entry.value.y < 95)
+        .map((entry) => {
+              'timestamp': timeLabels[entry.key],
+              'value': entry.value.y,
+            })
+        .toList();
+  }
+
+
+  Widget _buildDataSection(String title, List<FlSpot> data, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Inter',
+          ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 200,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal, // Enable horizontal scrolling
+            child: SizedBox(
+              width: 327, // Dynamically calculate width based on data length
+              child: LineChart(
+                _buildLineChartData(data, color),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -619,7 +781,7 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
       maxY: _getMaxValue(data) + 10,
       lineBarsData: [
         LineChartBarData(
-          spots: getDataForRange(selectedRange, data),
+          spots: getDataForRange(30, data),
           isCurved: true,
           color: color,
           belowBarData: BarAreaData(show: false),
@@ -634,7 +796,7 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
             interval: 5, // Adjust interval for X-axis
             getTitlesWidget: (value, _) {
               int index = value.toInt();
-              if (index % 5 == 0 && index < timeLabels.length) {
+              if (index < timeLabels.length) {
                 return Text(
                   timeLabels[index],
                   style: const TextStyle(fontSize: 8),
@@ -648,25 +810,25 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
     );
   }
 
-  Widget _buildRangeButton(String range) {
+  Widget _buildHistoryButton() {
     return GestureDetector(
       onTap: () {
         setState(() {
-          selectedRange = range;
+          historyState = !historyState;
         });
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: selectedRange == range ? Colors.blue : Colors.grey.shade300,
+          color: historyState == true ? Colors.blue : Colors.grey.shade300,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
-          range,
+          "History",
           style: TextStyle(
             fontSize: 16,
-            color: selectedRange == range ? Colors.white : Colors.black,
+            color: historyState == true ? Colors.white : Colors.black,
             fontFamily: 'Inter',
           ),
         ),
