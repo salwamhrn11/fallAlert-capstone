@@ -12,6 +12,7 @@ import 'firebase_options.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'dart:io' show Platform;
 void main() async {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,8 +24,6 @@ void main() async {
     options: DefaultFirebaseOptions.android,
   );
 
-
-
   // Run the app after initialization
   runApp(const MyApp());
 }
@@ -33,22 +32,44 @@ class MQTTService {
   MqttServerClient? client;
   String broker = 'test.mosquitto.org'; // Use your broker's address
   String clientId = 'capstone';
-  String topic = 'fall-detection/readings'; // Use your topic
+  String topic = 'fall-detection/readings/1234'; // Use your topic
   int port = 1883;
   // ValueNotifier<bool> isFall = ValueNotifier<bool>(true); 
 
   // Add a reference to flutter_local_notifications
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
-  // Initialize the notifications
-  void initializeNotifications() {
-    const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const InitializationSettings initializationSettings = InitializationSettings(android: initializationSettingsAndroid);
+  // Request notification permission
+  Future<void> _requestNotificationPermission() async {
+    if (Platform.isAndroid) {
+      // Android 13+ specific permission request
+      final androidImplementation = flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      if (androidImplementation != null) {
+        bool? granted = await androidImplementation.requestNotificationsPermission();
+        if (granted == true) {
+          print('Notification permission granted');
+        } else {
+          print('Notification permission denied');
+        }
+      }
+    }
+  }
 
-    flutterLocalNotificationsPlugin.initialize(initializationSettings);
-  } 
+  // Initialize notifications
+  Future<void> _initializeNotifications() async {
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher'); // Ensure this icon exists
+
+    const InitializationSettings initializationSettings =
+        InitializationSettings(android: initializationSettingsAndroid);
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  }
 
   Future<void> connect(BuildContext context) async {
+    await _requestNotificationPermission();
+    await _initializeNotifications();
+
     client = MqttServerClient.withPort(broker, clientId, port);
 
     client!.logging(on: true); // Enable logging
