@@ -8,6 +8,9 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'firebase_options.dart';
+import 'package:mqtt_client/mqtt_client.dart';
+import 'package:mqtt_client/mqtt_server_client.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 void main() async {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,8 +21,139 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.android,
   );
+
+
+
   // Run the app after initialization
   runApp(const MyApp());
+}
+
+class MQTTService {
+  MqttServerClient? client;
+  String broker = 'test.mosquitto.org'; // Use your broker's address
+  String clientId = '';
+  String topic = 'fall-detection/readings'; // Use your topic
+  int port = 1883;
+  ValueNotifier<bool> isFall = ValueNotifier<bool>(true); 
+
+  // Add a reference to flutter_local_notifications
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
+  // Initialize the notifications
+  void initializeNotifications() {
+    const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const InitializationSettings initializationSettings = InitializationSettings(android: initializationSettingsAndroid);
+
+    flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  } 
+
+  Future<void> connect(BuildContext context) async {
+    client = MqttServerClient.withPort(broker, clientId, port);
+
+    client!.logging(on: true); // Enable logging
+    // client!.keepAlivePeriod = 20; // Set the keep-alive period for the connection
+    client!.onDisconnected = onDisconnected;
+    client!.onConnected = onConnected;
+    client!.onSubscribed = onSubscribed;
+
+    final MqttConnectMessage connMess = MqttConnectMessage()
+        .withClientIdentifier(clientId)
+        .startClean() // Start a clean session
+        .withWillQos(MqttQos.atMostOnce);
+    client!.connectionMessage = connMess;
+
+    try {
+      print('Connecting to broker...');
+      await client!.connect();
+    } catch (e) {
+      print('Connection failed: $e');
+      client!.disconnect();
+    }
+
+    // Check the connection status
+    if (client!.connectionStatus!.state == MqttConnectionState.connected) {
+      print('Connected to the broker!');
+    } else {
+      print('Connection failed. Status: ${client!.connectionStatus!.state}');
+      client!.disconnect();
+    }
+
+    // Subscribe to a topic
+    client!.subscribe(topic, MqttQos.atLeastOnce);
+    print('Subscribed to $topic');
+
+    // Listen for incoming messages
+    client!.updates!.listen((List<MqttReceivedMessage<MqttMessage>> messages) {
+      final MqttPublishMessage recMess = messages[0].payload as MqttPublishMessage;
+      final String message = MqttPublishPayload.bytesToStringAsString(recMess.payload.message);
+      print('Received message: $message from topic: ${messages[0].topic}');
+      _handleMessage(message, context); // Handle the boolean message
+    });
+  }
+
+  void onDisconnected() {
+    print('Disconnected from the broker');
+  }
+
+  void onConnected() {
+    print('Connected to the broker');
+  }
+
+  void onSubscribed(String topic) {
+    print('Subscribed to $topic');
+  }
+
+  void disconnect() {
+    client!.disconnect();
+  }
+
+  void _handleMessage(String message, BuildContext context) {
+    // Convert the string message to a boolean
+    if (message.toLowerCase() == 'true') {
+      isFall.value = true;
+      _showPopup(context); // Show the popup when true
+      _showNotification();
+    } else if (message.toLowerCase() == 'false') {
+      isFall.value = false;
+    } else {
+      print('Received an invalid message: $message');
+    }
+  }
+
+   void _showPopup(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Alert"),
+          content: Text("Your beloved person is fallen!"),
+          actions: [
+            TextButton(
+              child: Text("OK"),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Function to show notification
+  Future<void> _showNotification() async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails('channel_id', 'Channel Name',
+            importance: Importance.max, priority: Priority.high, showWhen: false);
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
+    
+    await flutterLocalNotificationsPlugin.show(
+      0, // Notification ID
+      'Fall Alert',
+      'Your beloved person is fallen!',
+      platformChannelSpecifics,
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -218,10 +352,12 @@ class _HealthOverviewScreenState extends State<HealthOverviewScreen> {
 
   // Reference to the Firebase database
   final DatabaseReference _dbRef = FirebaseDatabase.instance.ref();
+  final MQTTService _mqttService = MQTTService();
 
   @override
   void initState() {
     super.initState();
+    _mqttService.connect(context);
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
         heartRate = _generateRandomHeartRate();
