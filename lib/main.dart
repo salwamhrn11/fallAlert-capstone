@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -31,10 +32,10 @@ void main() async {
 class MQTTService {
   MqttServerClient? client;
   String broker = 'test.mosquitto.org'; // Use your broker's address
-  String clientId = '';
+  String clientId = 'capstone';
   String topic = 'fall-detection/readings'; // Use your topic
   int port = 1883;
-  ValueNotifier<bool> isFall = ValueNotifier<bool>(true); 
+  // ValueNotifier<bool> isFall = ValueNotifier<bool>(true); 
 
   // Add a reference to flutter_local_notifications
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
@@ -51,15 +52,14 @@ class MQTTService {
     client = MqttServerClient.withPort(broker, clientId, port);
 
     client!.logging(on: true); // Enable logging
-    // client!.keepAlivePeriod = 20; // Set the keep-alive period for the connection
+    client!.keepAlivePeriod = 60; // Set the keep-alive period for the connection
     client!.onDisconnected = onDisconnected;
     client!.onConnected = onConnected;
     client!.onSubscribed = onSubscribed;
 
     final MqttConnectMessage connMess = MqttConnectMessage()
-        .withClientIdentifier(clientId)
         .startClean() // Start a clean session
-        .withWillQos(MqttQos.atMostOnce);
+        .withWillQos(MqttQos.atLeastOnce);
     client!.connectionMessage = connMess;
 
     try {
@@ -86,7 +86,7 @@ class MQTTService {
     client!.updates!.listen((List<MqttReceivedMessage<MqttMessage>> messages) {
       final MqttPublishMessage recMess = messages[0].payload as MqttPublishMessage;
       final String message = MqttPublishPayload.bytesToStringAsString(recMess.payload.message);
-      print('Received message: $message from topic: ${messages[0].topic}');
+      // print('Received message: $message from topic: ${messages[0].topic}');
       _handleMessage(message, context); // Handle the boolean message
     });
   }
@@ -108,15 +108,19 @@ class MQTTService {
   }
 
   void _handleMessage(String message, BuildContext context) {
-    // Convert the string message to a boolean
-    if (message.toLowerCase() == 'true') {
-      isFall.value = true;
-      _showPopup(context); // Show the popup when true
-      _showNotification();
-    } else if (message.toLowerCase() == 'false') {
-      isFall.value = false;
-    } else {
-      print('Received an invalid message: $message');
+    try {
+      // Parse the JSON string into a Dart Map
+      var data = jsonDecode(message);
+      var isFall = data['fall']; // Assuming 0 = no fall, 1 = fall detected
+      print('Fall status: ${isFall == 1 ? "Fall detected" : "No fall"}');
+
+      // Check for fall detection
+      if (isFall == 1) {
+        _showPopup(context); // Show the popup when a fall is detected
+        _showNotification(); // Show a notification
+      }
+    } catch (e) {
+      print('Error parsing message: $e');
     }
   }
 
