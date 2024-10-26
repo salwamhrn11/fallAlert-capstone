@@ -740,6 +740,81 @@ class HealthCard extends StatelessWidget {
   }
 }
 
+class AnomalyCard extends StatelessWidget {
+  final String title;
+  final String description;
+  final int count;
+  final String imagePath;
+
+  const AnomalyCard({
+    Key? key,
+    required this.title,
+    required this.description,
+    required this.count,
+    required this.imagePath,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      width: 309,
+      height: 128,
+      decoration: BoxDecoration(
+        image: DecorationImage(
+          image: AssetImage(imagePath),
+          fit: BoxFit.cover,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Judul di tengah
+            Flexible(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  fontFamily: 'Inter',
+                    color: Color(0xFF042A3B),
+                ),
+                textAlign: TextAlign.center, // Memastikan judul rata tengah
+                overflow: TextOverflow.visible,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              description,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Inter',
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Jumlah Anomali: $count',
+              style: const TextStyle(
+                fontSize: 19,
+                fontWeight: FontWeight.w800,
+                fontFamily: 'Inter',
+                color: Color(0xFFBB0000),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // Health Analytics Page
 //kode perdetik tp masih patah2 + blm 5 detik
 class HealthAnalyticsPage extends StatefulWidget {
@@ -841,28 +916,34 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
       children: [
         GestureDetector(
           onTap: () => _showAnomalyDialog("High Heart Rate Alerts", highHeartRate),
-          child: _buildStatCard(
-            'High Heart Rate Alerts',
-            'Heart rate > 120',
-            abnormalHighHeartRateCount,
+          child: AnomalyCard(
+            title: 'Peringatan Detak Jantung Tinggi',
+            // title2: 'Jantung Tinggi',
+            description: 'Detak jantung > 100',
+            count: abnormalHighHeartRateCount,
+            imagePath: 'images/heart_background.png', // Ganti dengan path gambar yang sesuai
           ),
         ),
         const SizedBox(height: 16),
         GestureDetector(
           onTap: () => _showAnomalyDialog("Low Heart Rate Alerts", lowHeartRate),
-          child: _buildStatCard(
-            'Low Heart Rate Alerts',
-            'Heart rate < 60',
-            abnormalLowHeartRateCount,
+          child: AnomalyCard(
+            title: 'Peringatan Detak Jantung Rendah',
+            // title2: 'Jantung Rendah',
+            description: 'Detak Jantung < 60',
+            count: abnormalLowHeartRateCount,
+            imagePath: 'images/heart_background2.png', // Ganti dengan path gambar yang sesuai
           ),
         ),
         const SizedBox(height: 16),
         GestureDetector(
           onTap: () => _showAnomalyDialog("Low Oxygen Saturation Alerts", lowOxySaturation),
-          child: _buildStatCard(
-            'Low Oxygen Saturation Alerts',
-            'Oxygen saturation < 95%',
-            abnormalOxygenSaturationCount,
+          child: AnomalyCard(
+            title: 'Peringatan Saturasi Oksigen Rendah',
+            // title2: 'Oksigen Rendah',
+            description: 'Saturasi Oksigen < 95%',
+            count: abnormalOxygenSaturationCount,
+            imagePath: 'images/oxygen_background.png', // Ganti dengan path gambar yang sesuai
           ),
         ),
       ],
@@ -1058,13 +1139,14 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
         margin: const EdgeInsets.symmetric(horizontal: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: historyState == true ? Colors.blue : Colors.grey.shade300,
+          color: historyState == true ? Color(0xFF1E7A8F) : Colors.grey.shade300,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
-          "History",
+          "Anomali",
           style: TextStyle(
             fontSize: 16,
+            fontWeight: FontWeight.w600,
             color: historyState == true ? Colors.white : Colors.black,
             fontFamily: 'Inter',
           ),

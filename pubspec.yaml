@@ -40,6 +40,7 @@ flutter:
     - images/oxygen_background.png
     - images/heart_background.png
     - images/iconnotif.png
+    - images/heart_background2.png
 
   fonts:
     - family: Inter
