@@ -13,6 +13,7 @@ import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:io' show Platform;
+
 void main() async {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,6 +28,49 @@ void main() async {
   // Run the app after initialization
   runApp(const MyApp());
 }
+
+class RealtimeDatabaseService {
+  final DatabaseReference databaseRef;
+
+  RealtimeDatabaseService() : databaseRef = FirebaseDatabase.instance.ref();
+
+  Future<void> cleanUpOldData() async {
+    try {
+      // 1. Retrieve Data
+      final snapshot = await databaseRef.child('healthOverview').get();
+
+      // Ensure that snapshot exists and is not null
+      if (snapshot.exists) {
+        final oldEntries = snapshot.value as Map<dynamic, dynamic>;
+        final now = DateTime.now();
+        final thirtyDaysAgo = now.subtract(const Duration(days: 30)); // Change to 30 days
+
+        // 2. Filter by Timestamp
+        final entriesToDelete = oldEntries.entries.where((entry) {
+          final entryValue = entry.value as Map<dynamic, dynamic>?; // Cast to Map
+          
+          // Check if entryValue is not null and has a timestamp
+          if (entryValue != null && entryValue['timestamp'] != null) {
+            final timestamp = DateTime.parse(entryValue['timestamp']);
+            return timestamp.isBefore(thirtyDaysAgo);
+          }
+          return false; // If there's no timestamp, do not include in deletion
+        }).toList();
+
+        // 3. Delete Entries
+        for (final entry in entriesToDelete) {
+          await databaseRef.child('healthOverview/${entry.key}').remove();
+          print('Deleted entry with key: ${entry.key}');
+        }
+      } else {
+        print('No data found in healthOverview.');
+      }
+    } catch (error) {
+      print('Error cleaning up old data: $error');
+    }
+  }
+}
+
 
 class User {
   final String username = '1234';
@@ -468,14 +512,14 @@ class _HealthOverviewScreenState extends State<HealthOverviewScreen> {
   int heartRate = 75;
   int oxygenSaturation = 98;
 
-  // Reference to the Firebase database
-  final DatabaseReference _dbRef = FirebaseDatabase.instance.ref();
+  final RealtimeDatabaseService _realTimeService = RealtimeDatabaseService();
   final MQTTService _mqttService = MQTTService();
 
   @override
   void initState() {
     super.initState();
     _mqttService.connect(context);
+    _realTimeService.cleanUpOldData();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
         heartRate = _generateRandomHeartRate();
@@ -485,7 +529,6 @@ class _HealthOverviewScreenState extends State<HealthOverviewScreen> {
       _pushHealthData(heartRate, oxygenSaturation);
     });
   }
-
 
   // Function to push data to Firebase
   void _pushHealthData(int heartRate, int oxygenSaturation) {
@@ -497,7 +540,7 @@ class _HealthOverviewScreenState extends State<HealthOverviewScreen> {
     };
 
     // Push the data to Firebase under "healthOverview" node
-    _dbRef.child('healthOverview').push().set(healthData).then((_) {
+    _realTimeService.databaseRef.child('healthOverview').push().set(healthData).then((_) {
       print("Data saved successfully!");
     }).catchError((error) {
       print("Failed to save data: $error");
@@ -846,7 +889,7 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
   List<FlSpot> heartRateData = [];
   List<FlSpot> oxygenSaturationData = [];
   List<String> timeLabels = [];
-  final DatabaseReference _dbRef = FirebaseDatabase.instance.ref();
+  final RealtimeDatabaseService _realTimeService = RealtimeDatabaseService();
   int _indexCounter = 0; // Auto-increment index for X
 
   @override
@@ -856,7 +899,7 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
   }
 
   void _fetchDataFromFirebase() {
-    _dbRef.child('healthOverview').limitToLast(100).onChildAdded.listen((event) {
+    _realTimeService.databaseRef.child('healthOverview').limitToLast(100).onChildAdded.listen((event) {
       if (event.snapshot.exists) {
         Map<dynamic, dynamic> value = event.snapshot.value as Map<dynamic, dynamic>;
 
