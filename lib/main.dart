@@ -28,13 +28,22 @@ void main() async {
   runApp(const MyApp());
 }
 
-class MQTTService {
+class User {
+  final String username = '1234';
+  final int port = 1883;
+}
+
+class MQTTService { 
+  final User user = User();
   MqttServerClient? client;
   String broker = 'test.mosquitto.org'; // Use your broker's address
   String clientId = 'capstone';
-  String topic = 'fall-detection/readings/1234'; // Use your topic
-  String debugTopic = 'fall-detection/readings/1234/debug'; 
-  int port = 1883;
+  late String topic;
+  late String debugTopic;
+  MQTTService(){
+    topic = 'fall-detection/readings/${user.username}'; // Use your topic
+    debugTopic = 'fall-detection/readings/${user.username}/debug';
+  } 
   // ValueNotifier<bool> isFall = ValueNotifier<bool>(true); 
 
   // Timer for tracking new messages
@@ -75,7 +84,7 @@ class MQTTService {
     await _requestNotificationPermission();
     await _initializeNotifications();
 
-    client = MqttServerClient.withPort(broker, clientId, port);
+    client = MqttServerClient.withPort(broker, clientId, user.port);
 
     client!.logging(on: true); // Enable logging
     client!.keepAlivePeriod = 60; // Set the keep-alive period for the connection
@@ -284,9 +293,10 @@ class ConnectPage extends StatefulWidget {
 }
 
 class _ConnectPageState extends State<ConnectPage> {
-  final TextEditingController serverController = TextEditingController();
+  final TextEditingController usernameController = TextEditingController();
   final TextEditingController portController = TextEditingController();
   String errorMessage = '';
+  final User user = User();
 
   @override
   Widget build(BuildContext context) {
@@ -316,9 +326,9 @@ class _ConnectPageState extends State<ConnectPage> {
             Column(
               children: [
                 TextField(
-                  controller: serverController, // Mengambil input dari user
+                  controller: usernameController, // Mengambil input dari user
                   decoration: InputDecoration(
-                    labelText: 'Masukkan server',
+                    labelText: 'Masukkan username',
                     prefixIcon: Image.asset(
                       'images/iconserver.png',
                       width: 24,
@@ -387,16 +397,23 @@ class _ConnectPageState extends State<ConnectPage> {
             ElevatedButton(
               onPressed: () {
                 // Validasi input
-                if (serverController.text.isNotEmpty && portController.text.isNotEmpty) {
-                  // Jika valid, arahkan ke halaman HealthOverviewScreen
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const HealthOverviewScreen()),
-                  );
+                if (usernameController.text.isNotEmpty && portController.text.isNotEmpty) {
+                  if (usernameController.text == user.username && portController.text == user.port.toString()){
+                    // Jika valid, arahkan ke halaman HealthOverviewScreen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const HealthOverviewScreen()),
+                    );
+                  }
+                  else{
+                    setState(() {
+                      errorMessage = 'Username atau Port tidak cocok!';
+                    });
+                  }
                 } else {
                   // Jika tidak valid, tampilkan pesan error
                   setState(() {
-                    errorMessage = 'Both server and port must be filled!';
+                    errorMessage = 'Kolom username dan port harus diisi!';
                   });
                 }
               },
