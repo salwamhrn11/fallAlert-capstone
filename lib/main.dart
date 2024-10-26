@@ -153,21 +153,65 @@ class MQTTService {
     }
   }
 
-   void _showPopup(BuildContext context) {
+  void _showPopup(BuildContext context) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("Alert"),
-          content: Text("Your beloved person is fallen!"),
-          actions: [
-            TextButton(
-              child: Text("OK"),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+        return SizedBox(
+          width: 190,
+          height: 280,
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24), // Rounded corners
             ),
-          ],
+            contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset(
+                  'images/iconnotif.png', // Path to the custom icon
+                  width: 51,
+                  height: 52,
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  "Jatuh Terdeteksi!",
+                  style: TextStyle(
+                    fontSize: 28, // Adjust font size for fitting
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  "Pengguna jatuh! Segera hubungi fasilitas kesehatan terdekat!",
+                  style: TextStyle(
+                    fontSize: 20, // Adjust font size for fitting
+                    color: Colors.black45,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(32),
+                    ),
+                    backgroundColor: Colors.teal, // Button color
+                  ),
+                  child: const Text(
+                    'Close',
+                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -182,8 +226,8 @@ class MQTTService {
     
     await flutterLocalNotificationsPlugin.show(
       0, // Notification ID
-      'Fall Alert',
-      'Your beloved person is fallen!',
+      'Jatuh Terdeteksi',
+      'Pengguna jatuh! Segera hubungi fasilitas kesehatan terdekat!',
       platformChannelSpecifics,
     );
   }
@@ -249,7 +293,7 @@ class _ConnectPageState extends State<ConnectPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Connect to Your Device',
+          'Sambungkan Perangkat',
           style: TextStyle(
               fontFamily: 'Inter', fontSize: 18, fontWeight: FontWeight.w700),
         ),
@@ -274,7 +318,7 @@ class _ConnectPageState extends State<ConnectPage> {
                 TextField(
                   controller: serverController, // Mengambil input dari user
                   decoration: InputDecoration(
-                    labelText: 'Enter your server',
+                    labelText: 'Masukkan server',
                     prefixIcon: Image.asset(
                       'images/iconserver.png',
                       width: 24,
@@ -307,7 +351,7 @@ class _ConnectPageState extends State<ConnectPage> {
                 TextField(
                   controller: portController, // Mengambil input dari user
                   decoration: InputDecoration(
-                    labelText: 'Enter your port',
+                    labelText: 'Masukkan port',
                     prefixIcon: Image.asset(
                       'images/iconport.png',
                       width: 24,
@@ -368,7 +412,7 @@ class _ConnectPageState extends State<ConnectPage> {
                 height: 56,
                 child: Center(
                   child: Text(
-                    'Connect',
+                    'Sambungkan',
                     style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 16,
@@ -509,7 +553,7 @@ class _HealthOverviewScreenState extends State<HealthOverviewScreen> {
               ),
               const SizedBox(height: 10),
               const Text(
-                'You’re connected with your device',
+                'Tersambung dengan perangkat',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -534,7 +578,7 @@ class _HealthOverviewScreenState extends State<HealthOverviewScreen> {
                   height: 25,
                   child: Center(
                     child: Text(
-                      'Disconnect Your Device',
+                      'Putuskan Sambungan dengan Perangkat',
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 14,
@@ -549,26 +593,26 @@ class _HealthOverviewScreenState extends State<HealthOverviewScreen> {
               Divider(color: const Color(0xFFE2E5EF), thickness: 2),
               const SizedBox(height: 16),
               const Text(
-                'Health Overview',
-                style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, fontFamily: 'Inter'),
+                'Informasi Tanda Vital',
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, fontFamily: 'Inter'),
               ),
               const SizedBox(height: 12),
               Center(
                 child: Column(
                   children: [
                     HealthCard(
-                      title: 'Heart rate',
+                      title: 'Detak Jantung',
                       value: heartRate.toString(), // Nilai heart rate
                       unit: 'beats/min',
-                      normalRange: 'Normal: 60 to 100 beats/min',
+                      normalRange: 'Normal: 60 sampai 100 beats/min',
                       imagePath: 'images/heart_background.png',
                     ),
                     const SizedBox(height: 16),
                     HealthCard(
-                      title: 'Oxygen Saturation',
+                      title: 'Saturasi Oksigen',
                       value: '$oxygenSaturation%', // Nilai oxygen saturation
                       unit: '',
-                      normalRange: 'Normal: more than equal to 95%',
+                      normalRange: 'Normal: lebih dari atau sama dengan 95%',
                       imagePath: 'images/oxygen_background.png',
                     ),
                   ],
@@ -584,7 +628,7 @@ class _HealthOverviewScreenState extends State<HealthOverviewScreen> {
                 },
                 child: const Center(
                   child: Text(
-                    'View Health Analytics',
+                    'Lihat Analisis Kesehatan',
                     style: TextStyle(
                       color: Color(0xFF1E7A8F),
                       fontSize: 18,
@@ -750,7 +794,7 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Health Analytics',
+          'Analisis Kesehatan',
           style: TextStyle(
             fontFamily: 'Inter',
             fontSize: 18,
