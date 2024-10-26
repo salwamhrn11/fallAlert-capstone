@@ -33,8 +33,13 @@ class MQTTService {
   String broker = 'test.mosquitto.org'; // Use your broker's address
   String clientId = 'capstone';
   String topic = 'fall-detection/readings/1234'; // Use your topic
+  String debugTopic = 'fall-detection/readings/1234/debug'; 
   int port = 1883;
   // ValueNotifier<bool> isFall = ValueNotifier<bool>(true); 
+
+  // Timer for tracking new messages
+  Timer? _messageTimer;
+  final int messageTimeout = 30; // Time in seconds to wait for new messages
 
   // Add a reference to flutter_local_notifications
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
@@ -103,12 +108,15 @@ class MQTTService {
     client!.subscribe(topic, MqttQos.atLeastOnce);
     print('Subscribed to $topic');
 
+    _startMessageTimer(context); // Start the timer
+
     // Listen for incoming messages
     client!.updates!.listen((List<MqttReceivedMessage<MqttMessage>> messages) {
       final MqttPublishMessage recMess = messages[0].payload as MqttPublishMessage;
       final String message = MqttPublishPayload.bytesToStringAsString(recMess.payload.message);
       // print('Received message: $message from topic: ${messages[0].topic}');
       _handleMessage(message, context); // Handle the boolean message
+      _resetMessageTimer(context); // Reset timer
     });
   }
 
@@ -178,6 +186,30 @@ class MQTTService {
       'Your beloved person is fallen!',
       platformChannelSpecifics,
     );
+  }
+
+  // Start the timer to monitor for new messages
+  void _startMessageTimer(BuildContext context) {
+    _messageTimer = Timer(Duration(seconds: messageTimeout), () {
+      // No message was received within the timeout period, publish to a new topic
+      publishMessage(debugTopic, '{"alert": "No new data received"}');
+      print('No new message received in $messageTimeout seconds. Alert message published.');
+    });
+  }
+
+  // Reset the message timer when a new message is received
+  void _resetMessageTimer(BuildContext context) {
+    _messageTimer?.cancel(); // Cancel the previous timer
+    _startMessageTimer(context); // Start a new timer
+  }
+
+  // Publish a message to a new topic
+  void publishMessage(String topic, String message) {
+    final MqttClientPayloadBuilder builder = MqttClientPayloadBuilder();
+    builder.addString(message);
+    
+    client!.publishMessage(topic, MqttQos.atLeastOnce, builder.payload!);
+    print('Message published to $topic: $message');
   }
 }
 
