@@ -12,6 +12,7 @@ import 'firebase_options.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'dart:io' show Platform;
 
 void main() async {
@@ -24,6 +25,23 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.android,
   );
+  // Menangani pesan saat aplikasi sedang di-background
+  FirebaseMessaging messaging = FirebaseMessaging.instance;
+
+  // Mencetak token perangkat ke konsol
+  messaging.getToken().then((String? token) {
+    print("Device Token: $token");
+  });
+
+  // Listener untuk menerima pesan saat aplikasi aktif di foreground
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    print('Pesan baru: ${message.notification?.title}');
+  });
+
+  // Listener saat notifikasi dibuka dari latar belakang
+  FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+    print('Pesan dibuka dari background: ${message.notification?.title}');
+  });
 
   // Run the app after initialization
   runApp(const MyApp());
