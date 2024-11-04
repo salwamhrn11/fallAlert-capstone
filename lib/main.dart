@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'dart:async';
@@ -14,10 +15,24 @@ import 'package:mqtt_client/mqtt_server_client.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'dart:io' show Platform;
+import 'package:flutter_background/flutter_background.dart';
+import 'package:flutter_autostart/flutter_autostart.dart';
 
 void main() async {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Request auto-start permission and handle device-specific behavior
+  final flutterAutostart = FlutterAutostart();
+  
+  try {
+    bool? isAutoStartEnabled = await flutterAutostart.checkIsAutoStartEnabled();
+    if (!isAutoStartEnabled!) {
+      await flutterAutostart.showAutoStartPermissionSettings();
+    }
+  } on PlatformException {
+    print('Failed to request auto-start permission.');
+  }
 
   // Initialize the date formatting for the 'id' locale (Indonesian)
   await initializeDateFormatting('id', null);
@@ -42,6 +57,16 @@ void main() async {
   FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
     print('Pesan dibuka dari background: ${message.notification?.title}');
   });
+  
+  await FlutterBackground.initialize(
+    androidConfig: FlutterBackgroundAndroidConfig(
+      notificationTitle: "My App",
+      notificationText: "Running in background",
+      notificationImportance: AndroidNotificationImportance.max,
+      enableWifiLock: true,
+    ),
+  );
+  FlutterBackground.enableBackgroundExecution();
 
   // Run the app after initialization
   runApp(const MyApp());

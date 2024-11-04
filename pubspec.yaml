@@ -20,6 +20,8 @@ dependencies:
   mqtt_client: ^10.5.1
   flutter_local_notifications: ^17.2.3
   firebase_messaging: ^15.1.3  # Add this for Firebase Cloud Messaging
+  flutter_background: ^1.0.0
+  flutter_autostart: ^0.0.2
 
 dev_dependencies:
   flutter_test:
