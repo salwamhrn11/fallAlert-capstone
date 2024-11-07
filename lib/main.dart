@@ -40,27 +40,31 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.android,
   );
-  // Menangani pesan saat aplikasi sedang di-background
+
+  // Initialize the NotificationService
+  await FCMNotificationService.initialize();
+
   FirebaseMessaging messaging = FirebaseMessaging.instance;
 
-  // Mencetak token perangkat ke konsol
-  messaging.getToken().then((String? token) {
-    print("Device Token: $token");
-  });
+  // messaging.getToken().then((String? token) {
+  //   print("Device Token: $token");
+  // });
 
-  // Listener untuk menerima pesan saat aplikasi aktif di foreground
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    print('Pesan baru: ${message.notification?.title}');
+    print('Foreground message received: ${message.notification?.title}');
+    FCMNotificationService.showRemoteNotification(message);
   });
 
-  // Listener saat notifikasi dibuka dari latar belakang
   FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-    print('Pesan dibuka dari background: ${message.notification?.title}');
+    print('Notification opened from background: ${message.notification?.title}');
   });
+
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
   
   await FlutterBackground.initialize(
     androidConfig: FlutterBackgroundAndroidConfig(
-      notificationTitle: "My App",
+      notificationTitle: "Vesthor",
       notificationText: "Running in background",
       notificationImportance: AndroidNotificationImportance.max,
       enableWifiLock: true,
@@ -70,6 +74,45 @@ void main() async {
 
   // Run the app after initialization
   runApp(const MyApp());
+}
+
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  print('Background message received: ${message.notification?.title}');
+  FCMNotificationService.showRemoteNotification(message);
+}
+
+class FCMNotificationService {
+  static final FlutterLocalNotificationsPlugin _localNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+
+  static Future<void> initialize() async {
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const InitializationSettings initializationSettings =
+        InitializationSettings(android: initializationSettingsAndroid);
+
+    await _localNotificationsPlugin.initialize(initializationSettings);
+  }
+
+  static Future<void> showRemoteNotification(RemoteMessage message) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'vesthor_fall_notification',
+      'Fall Notification',
+      channelDescription: 'Fall allert notification',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+    const NotificationDetails platformChannelSpecifics =
+        NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    await _localNotificationsPlugin.show(
+      0,
+      message.notification?.title,
+      message.notification?.body,
+      platformChannelSpecifics,
+    );
+  }
 }
 
 class RealtimeDatabaseService {
@@ -130,6 +173,7 @@ class MQTTService {
   MQTTService(){
     topic = 'fall-detection/readings/${user.username}'; // Use your topic
     debugTopic = 'fall-detection/readings/${user.username}/debug';
+    FCMNotificationService.initialize();
   } 
   // ValueNotifier<bool> isFall = ValueNotifier<bool>(true); 
 
@@ -243,6 +287,7 @@ class MQTTService {
       if (isFall == 1) {
         _showPopup(context); // Show the popup when a fall is detected
         _showNotification(); // Show a notification
+        FCMNotificationService.showRemoteNotification(message as RemoteMessage);
       }
     } catch (e) {
       print('Error parsing message: $e');
@@ -553,7 +598,7 @@ class HealthOverviewScreen extends StatefulWidget {
 class _HealthOverviewScreenState extends State<HealthOverviewScreen> {
   late Timer _timer;
   int heartRate = 75;
-  int oxygenSaturation = 98;
+  // int oxygenSaturation = 98;
 
   final RealtimeDatabaseService _realTimeService = RealtimeDatabaseService();
   final MQTTService _mqttService = MQTTService();
@@ -566,19 +611,18 @@ class _HealthOverviewScreenState extends State<HealthOverviewScreen> {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
         heartRate = _generateRandomHeartRate();
-        oxygenSaturation = _generateRandomOxygenSaturation();
+        // oxygenSaturation = _generateRandomOxygenSaturation();
       });
       // Push the data to Firebase
-      _pushHealthData(heartRate, oxygenSaturation);
+      _pushHealthData(heartRate);
     });
   }
 
   // Function to push data to Firebase
-  void _pushHealthData(int heartRate, int oxygenSaturation) {
+  void _pushHealthData(int heartRate) {
     // Define the structure of the data
     Map<String, dynamic> healthData = {
       'heart_rate': heartRate,
-      'oxygen_saturation': oxygenSaturation,
       'timestamp': DateTime.now().toIso8601String(),
     };
 
@@ -601,9 +645,9 @@ class _HealthOverviewScreenState extends State<HealthOverviewScreen> {
     return 58 + Random().nextInt(64);
   }
 
-  int _generateRandomOxygenSaturation() {
-    return 94 + Random().nextInt(6);
-  }
+  // int _generateRandomOxygenSaturation() {
+  //   return 94 + Random().nextInt(6);
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -709,14 +753,6 @@ class _HealthOverviewScreenState extends State<HealthOverviewScreen> {
                       unit: 'beats/min',
                       normalRange: 'Normal: 60 sampai 100 beats/min',
                       imagePath: 'images/heart_background.png',
-                    ),
-                    const SizedBox(height: 16),
-                    HealthCard(
-                      title: 'Saturasi Oksigen',
-                      value: '$oxygenSaturation%', // Nilai oxygen saturation
-                      unit: '',
-                      normalRange: 'Normal: lebih dari atau sama dengan 95%',
-                      imagePath: 'images/oxygen_background.png',
                     ),
                   ],
                 ),
@@ -930,7 +966,7 @@ class HealthAnalyticsPage extends StatefulWidget {
 class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
   bool historyState = false;
   List<FlSpot> heartRateData = [];
-  List<FlSpot> oxygenSaturationData = [];
+  // List<FlSpot> oxygenSaturationData = [];
   List<String> timeLabels = [];
   final RealtimeDatabaseService _realTimeService = RealtimeDatabaseService();
   int _indexCounter = 0; // Auto-increment index for X
@@ -947,7 +983,7 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
         Map<dynamic, dynamic> value = event.snapshot.value as Map<dynamic, dynamic>;
 
         double heartRate = double.tryParse(value['heart_rate'].toString()) ?? 0;
-        double oxygenSaturation = double.tryParse(value['oxygen_saturation'].toString()) ?? 0;
+        // double oxygenSaturation = double.tryParse(value['oxygen_saturation'].toString()) ?? 0;
 
         DateTime? timestamp = DateTime.tryParse(event.snapshot.key ?? '') ?? DateTime.now();
         double xValue = _indexCounter.toDouble(); // Convert index to double for chart
@@ -955,7 +991,7 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
 
         setState(() {
           heartRateData.add(FlSpot(xValue, heartRate));
-          oxygenSaturationData.add(FlSpot(xValue, oxygenSaturation));
+          // oxygenSaturationData.add(FlSpot(xValue, oxygenSaturation));
           timeLabels.add(DateFormat.Hms().format(timestamp));
         });
       }
@@ -996,8 +1032,6 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
               ? Column(
                   children: [
                     _buildDataSection('Heart Rate Analytics', heartRateData, Colors.red),
-                    const SizedBox(height: 16),
-                    _buildDataSection('Oxygen Saturation Analytics', oxygenSaturationData, Colors.blue),
                   ],
                 )
               : _buildHistoryStats(), // Show history stats when historyState is true
@@ -1008,12 +1042,12 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
   }
 
   Widget _buildHistoryStats() {
-    List<Map<String, dynamic>> lowOxySaturation = _getLowOxygenSaturationAnomalies();
+    // List<Map<String, dynamic>> lowOxySaturation = _getLowOxygenSaturationAnomalies();
     List<Map<String, dynamic>> highHeartRate = _getHighHeartRateAnomalies();
     List<Map<String, dynamic>> lowHeartRate = _getLowHeartRateAnomalies();
     int abnormalHighHeartRateCount = highHeartRate.length;
     int abnormalLowHeartRateCount = lowHeartRate.length;
-    int abnormalOxygenSaturationCount = lowOxySaturation.length;
+    // int abnormalOxygenSaturationCount = lowOxySaturation.length;
 
     return Column(
       children: [
@@ -1036,17 +1070,6 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
             description: 'Detak Jantung < 60',
             count: abnormalLowHeartRateCount,
             imagePath: 'images/heart_background2.png', // Ganti dengan path gambar yang sesuai
-          ),
-        ),
-        const SizedBox(height: 16),
-        GestureDetector(
-          onTap: () => _showAnomalyDialog("Low Oxygen Saturation Alerts", lowOxySaturation),
-          child: AnomalyCard(
-            title: 'Peringatan Saturasi Oksigen Rendah',
-            // title2: 'Oksigen Rendah',
-            description: 'Saturasi Oksigen < 95%',
-            count: abnormalOxygenSaturationCount,
-            imagePath: 'images/oxygen_background.png', // Ganti dengan path gambar yang sesuai
           ),
         ),
       ],
@@ -1152,19 +1175,19 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
         .toList();
   }
 
-  List<Map<String, dynamic>> _getLowOxygenSaturationAnomalies() {
-    DateTime now = DateTime.now();
-    return oxygenSaturationData
-        .asMap()
-        .entries
-        .where((entry) =>
-            entry.value.y < 95)
-        .map((entry) => {
-              'timestamp': timeLabels[entry.key],
-              'value': entry.value.y,
-            })
-        .toList();
-  }
+  // List<Map<String, dynamic>> _getLowOxygenSaturationAnomalies() {
+  //   DateTime now = DateTime.now();
+  //   return oxygenSaturationData
+  //       .asMap()
+  //       .entries
+  //       .where((entry) =>
+  //           entry.value.y < 95)
+  //       .map((entry) => {
+  //             'timestamp': timeLabels[entry.key],
+  //             'value': entry.value.y,
+  //           })
+  //       .toList();
+  // }
 
 
   Widget _buildDataSection(String title, List<FlSpot> data, Color color) {
