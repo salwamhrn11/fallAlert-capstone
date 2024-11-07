@@ -17,6 +17,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'dart:io' show Platform;
 import 'package:flutter_background/flutter_background.dart';
 import 'package:flutter_autostart/flutter_autostart.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   // Ensure Flutter is initialized
@@ -429,6 +430,70 @@ class _ConnectPageState extends State<ConnectPage> {
   final TextEditingController portController = TextEditingController();
   String errorMessage = '';
   final User user = User();
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+    _checkLoginStatus();
+    _loadSavedData(); // Load saved username and port when the page is created
+
+  }
+
+  // Method to check login
+  Future<void> _checkLoginStatus() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+
+    if (isLoggedIn) {
+      // next page
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HealthOverviewScreen()),
+      );
+    } else {
+      // klo belum disimpen data loginnya
+      _loadUserData();
+    }
+  }
+
+  // Method to load saved username and port
+  Future<void> _loadSavedData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? savedUsername = prefs.getString('username');
+    String? savedPort = prefs.getString('port');
+
+    if (savedUsername != null) {
+      usernameController.text = savedUsername;
+    }
+
+    if (savedPort != null) {
+      portController.text = savedPort;
+    }
+  }
+
+  Future<void> _loadUserData() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? savedUsername = prefs.getString('username');
+    String? savedPort = prefs.getString('port');
+
+    if (savedUsername != null && savedPort != null) {
+      usernameController.text = savedUsername;
+      portController.text = savedPort;
+    }
+  }
+
+  // Method to save username and port
+  Future<void> _saveUserData(String username, String port) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('username', username);
+    await prefs.setString('port', port);
+  }
+
+  // Method to save login status
+  Future<void> _setLoginStatus(bool status) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isLoggedIn', status);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -532,9 +597,12 @@ class _ConnectPageState extends State<ConnectPage> {
                 if (usernameController.text.isNotEmpty && portController.text.isNotEmpty) {
                   if (usernameController.text == user.username && portController.text == user.port.toString()){
                     // Jika valid, arahkan ke halaman HealthOverviewScreen
-                    Navigator.push(
+                    _saveUserData(usernameController.text, portController.text);
+                    _setLoginStatus(true);
+                    Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (context) => const HealthOverviewScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => const HealthOverviewScreen()),
                     );
                   }
                   else{
@@ -589,6 +657,18 @@ class _ConnectPageState extends State<ConnectPage> {
 // Health overview dashboard page
 class HealthOverviewScreen extends StatefulWidget {
   const HealthOverviewScreen({super.key});
+
+  // Method to logout
+  Future<void> _logout(BuildContext context) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isLoggedIn', false);
+
+    // Kembali ke halaman ConnectPage
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const ConnectPage()),
+    );
+  }
 
   @override
   _HealthOverviewScreenState createState() => _HealthOverviewScreenState();
