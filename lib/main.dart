@@ -791,8 +791,7 @@ class _HealthOverviewScreenState extends State<HealthOverviewScreen> {
               const SizedBox(height: 8),
               ElevatedButton(
                 onPressed: () {
-                  // Navigating back to the ConnectPage
-                  Navigator.pop(context);
+                  widget._logout(context);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFBB0000),
@@ -1018,7 +1017,7 @@ class AnomalyCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Jumlah Anomali: $count',
+              'Jumlah: $count',
               style: const TextStyle(
                 fontSize: 19,
                 fontWeight: FontWeight.w800,
@@ -1349,7 +1348,7 @@ class _HealthAnalyticsPageState extends State<HealthAnalyticsPage> {
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
-          "Anomali",
+          "Peringatan Tanda Vital",
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
